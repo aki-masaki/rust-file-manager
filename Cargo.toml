@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 crossterm = "0.28.1"
 ratatui = "0.28.1"
+rustix = "0.38.36"
+sysinfo = "0.31.4"
+users = "0.11.0"

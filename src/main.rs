@@ -10,6 +10,7 @@ use ratatui::prelude::CrosstermBackend;
 use ratatui::Terminal;
 use std::error::Error;
 use std::io;
+use std::path::PathBuf;
 
 mod app;
 mod ui;
@@ -39,6 +40,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
+    app.nav(PathBuf::from("/home/niki"));
+
     loop {
         if app.should_quit {
             break;
