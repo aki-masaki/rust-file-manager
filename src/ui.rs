@@ -25,25 +25,34 @@ fn status_bar(frame: &mut Frame<'_>, app: &mut App) {
     );
 }
 
-pub fn render_dir(frame: &mut Frame<'_>, dir: &mut Dir) {
+pub fn render_dir(frame: &mut Frame<'_>, dir: &Dir, level: i32) -> String {
     let mut text = String::new();
 
     for sub_dir in dir.sub_dirs.as_slice() {
-        if sub_dir.name.starts_with('.') {
-            continue
-        }
-
+        text += "  ".repeat(level as usize).as_str();
         text += &(sub_dir.name.as_str().to_owned() + "\n");
+
+        text += render_dir(frame, sub_dir, level + 1).as_str();
     }
 
+    for sub_file in dir.sub_files.as_slice() {
+        text += "  ".repeat(level as usize).as_str();
+        text += &(sub_file.to_owned() + "\n");
+    }
+
+    text
+}
+
+fn draw_dir(frame: &mut Frame<'_>, rendered_dir: String) {
     frame.render_widget(
-        Paragraph::new(text),
+        Paragraph::new(rendered_dir),
         Rect::new(0, 1, frame.area().width, frame.area().height - 1),
-    );
+    ); 
 }
 
 pub fn ui(frame: &mut Frame<'_>, app: &mut App) {
     status_bar(frame, app);
 
-    render_dir(frame, &mut app.main_dir);
+    let rendered_dir = render_dir(frame, &app.main_dir, 0);
+    draw_dir(frame, rendered_dir);
 }

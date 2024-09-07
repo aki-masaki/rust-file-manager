@@ -33,14 +33,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
-        DisableMouseCapture
+        DisableMouseCapture,
     )?;
     terminal.show_cursor()?;
     Ok(())
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
-    app.nav(PathBuf::from("/home/niki"));
+    app.nav(PathBuf::from("/home/niki"))?;
 
     loop {
         if app.should_quit {
