@@ -15,6 +15,7 @@ pub struct Dir {
 pub struct App {
     pub should_quit: bool,
     pub main_dir: Dir,
+    pub scroll: usize,
 }
 
 impl App {
@@ -27,6 +28,15 @@ impl App {
                 sub_dirs: Vec::new(),
                 sub_files: Vec::new(),
             },
+            scroll: 0,
+        }
+    }
+
+    fn scroll(&mut self, delta: usize, neg: bool) {
+        if neg {
+            self.scroll -= if self.scroll > 0 { delta } else { 0 };
+        } else {
+            self.scroll += delta;
         }
     }
 
@@ -35,6 +45,8 @@ impl App {
             if key.kind == event::KeyEventKind::Press {
                 match key.code {
                     KeyCode::Char('q') => self.should_quit = true,
+                    KeyCode::Char('l') => self.scroll(1, false),
+                    KeyCode::Char('h') => self.scroll(1, true),
                     _ => {}
                 }
             }
@@ -53,14 +65,26 @@ impl App {
             let path_buf = path.unwrap().path();
 
             if path_buf.is_dir() {
-                if !path_buf.file_name().unwrap_or_default().to_os_string().to_string_lossy().starts_with('.') {
+                if !path_buf
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_os_string()
+                    .to_string_lossy()
+                    .starts_with('.')
+                {
                     // TODO: remove if statement after implementing closing and opening directories
                     if path_buf.file_name().unwrap() != "target" {
                         sub_dirs.push(self.read_dir(path_buf).unwrap());
                     }
                 }
             } else {
-                if !path_buf.file_name().unwrap().to_str().unwrap().starts_with('.') {
+                if !path_buf
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .starts_with('.')
+                {
                     sub_files.push(
                         path_buf
                             .file_name()

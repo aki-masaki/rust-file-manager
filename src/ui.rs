@@ -43,9 +43,13 @@ pub fn render_dir(frame: &mut Frame<'_>, dir: &Dir, level: i32) -> String {
     text
 }
 
-fn draw_dir(frame: &mut Frame<'_>, rendered_dir: String) {
+fn draw_dir(frame: &mut Frame<'_>, rendered_dir: String, scroll: usize) {
+    let lines: Vec<&str> = rendered_dir.split('\n').into_iter().skip(scroll).collect();
+
+    let text = lines.join("\n");
+
     frame.render_widget(
-        Paragraph::new(rendered_dir),
+        Paragraph::new(text),
         Rect::new(0, 1, frame.area().width, frame.area().height - 1),
     ); 
 }
@@ -54,5 +58,5 @@ pub fn ui(frame: &mut Frame<'_>, app: &mut App) {
     status_bar(frame, app);
 
     let rendered_dir = render_dir(frame, &app.main_dir, 0);
-    draw_dir(frame, rendered_dir);
+    draw_dir(frame, rendered_dir, app.scroll);
 }
