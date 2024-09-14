@@ -142,6 +142,16 @@ impl App {
         self.selected_item.clone().0.unwrap().expanded = true;
     }
 
+    fn open(&mut self, dir: PathBuf) {
+        let _ = self.nav(dir);
+    }
+
+    fn open_selected(&mut self) {
+        if self.selected_item.0.is_some() {
+            self.open(PathBuf::from(self.selected_item.0.clone().unwrap().full_path));
+        }
+    }
+
     pub fn handle_events(&mut self) -> Result<(), Error> {
         if let Event::Key(key) = event::read()? {
             if key.kind == event::KeyEventKind::Press {
@@ -152,6 +162,7 @@ impl App {
                     KeyCode::Char('j') => self.select_next(),
                     KeyCode::Char('k') => self.select_previous(),
                     KeyCode::Char('s') => self.toggle_expand(),
+                    KeyCode::Char('o') => self.open_selected(),
                     _ => {}
                 }
             }
@@ -160,7 +171,7 @@ impl App {
         Ok(())
     }
 
-    pub fn read_dir(&mut self, dir_path: PathBuf) -> Result<Dir, Error> {
+    pub fn read_dir(&mut self, dir_path: PathBuf, is_root_dir: bool) -> Result<Dir, Error> {
         let mut sub_dirs: Vec<Dir> = Vec::new();
         let mut sub_files: Vec<(String, String)> = Vec::new();
 
@@ -180,6 +191,11 @@ impl App {
             expanded: true,
         };
 
+        if !is_root_dir {
+            self.selectable_items
+                .push((result_dir.id.clone(), dir_path));
+        }
+
         for path in paths {
             let path_buf = path.unwrap().path();
 
@@ -193,10 +209,8 @@ impl App {
                 {
                     // TODO: remove if statement after implementing closing and opening directories
                     if path_buf.file_name().unwrap() != "target" {
-                        let read_dir = self.read_dir(path_buf.clone()).unwrap();
+                        let read_dir = self.read_dir(path_buf.clone(), false).unwrap();
 
-                        self.selectable_items
-                            .push((read_dir.id.clone(), path_buf));
 
                         self.selectable_items.extend(
                             read_dir
@@ -236,7 +250,6 @@ impl App {
         result_dir.sub_dirs = sub_dirs.clone();
         result_dir.sub_files = sub_files.clone();
 
-
         self.all_dirs.extend(sub_dirs.clone());
         self.all_files.extend(sub_files.clone());
 
@@ -244,7 +257,12 @@ impl App {
     }
 
     pub fn nav(&mut self, path: PathBuf) -> Result<(), Error> {
-        self.main_dir = self.read_dir(path.clone()).unwrap();
+        self.selectable_items = Vec::new();
+        self.selected_item = (None, None);
+        self.selected_item_id = None;
+        self.scroll = 0;
+
+        self.main_dir = self.read_dir(path.clone(), true).unwrap();
 
         self.selectable_items.extend(self.main_dir.sub_files.clone().into_iter().map(|x| (x.0, PathBuf::from(x.1))));
 
