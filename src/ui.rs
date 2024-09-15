@@ -2,6 +2,7 @@ pub(crate) use crate::app::Dir;
 use crossterm::style::Color;
 use ratatui::prelude::Rect;
 use ratatui::prelude::Stylize;
+use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Paragraph;
@@ -9,20 +10,29 @@ use ratatui::Frame;
 use std::ffi::OsString;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 use sysinfo::System;
 
 use crate::App;
 
 fn get_icon(ext: String) -> (String, Color) {
     let icon = match ext.as_str() {
-        "png" => ("\u{e2a6} ", Color::Red),
+        "png" => ("\u{e2a6} ", Color::Cyan),
         "rs" => ("\u{e7a8} ", Color::Red),
         "go" => ("\u{e627} ", Color::Blue),
-        "toml|conf" => ("\u{e615} ", Color::Grey),
+        "toml" | "conf" | "lock" => ("\u{e615} ", Color::Grey),
         "ts" => ("\u{e628} ", Color::Blue),
         "js" => ("\u{e60c} ", Color::Yellow),
         "java" => ("\u{e738} ", Color::Red),
         "zip" => ("\u{f06eb} ", Color::Magenta),
+        "ico" | "icns" => ("\u{efa8} ", Color::Red),
+        "html" => ("\u{e60e} ", Color::Red),
+        "css" => ("\u{e614} ", Color::Blue),
+        "md" => ("\u{eb1d} ", Color::White),
+        "svg" => ("\u{f0721} ", Color::Red),
+        "json" => ("\u{eb0f} ", Color::Yellow),
+        "nix" => ("\u{f1105} ", Color::Cyan),
+        "sh" => ("\u{f120} ", Color::Green),
         _ => ("\u{f4a5} ", Color::White),
     };
 
@@ -104,10 +114,16 @@ pub fn render_dir<'a>(frame: &mut Frame<'_>, dir: &Dir, level: i32) -> Vec<Line<
         } else if level > 0 && i == 0 {
             line.push_span(Span::from("  ".repeat(level as usize)));
 
-            line.push_span(Span::from("└ "));
+            line.push_span(Span::styled(
+                "└ ",
+                Style::default().fg(ratatui::style::Color::DarkGray),
+            ));
         }
 
-        line.push_span(Span::from("\u{f024b} "));
+        line.push_span(Span::styled(
+            "\u{f024b} ",
+            Style::default().fg(ratatui::style::Color::Rgb(120, 81, 169)),
+        ));
 
         line.push_span(Span::from(sub_dir.name.as_str().to_owned() + "\n"));
 
@@ -132,7 +148,7 @@ pub fn render_dir<'a>(frame: &mut Frame<'_>, dir: &Dir, level: i32) -> Vec<Line<
                 .to_string(),
         );
 
-        spans.push(Span::from(icon.0).bg(icon.1));
+        spans.push(Span::from(icon.0).fg(icon.1));
 
         spans.push(Span::from(sub_file.to_owned().1 + "\n"));
 
@@ -148,12 +164,12 @@ fn draw_dir<'a>(frame: &mut Frame<'_>, rendered_dir: Vec<Line<'a>>, app: &mut Ap
 
     let mut l_lines: Vec<Line> = Vec::new();
 
-    for (i, line) in lines.clone().into_iter().enumerate() {
+    for (i, mut line) in lines.clone().into_iter().enumerate() {
         if i == 50 {
             break;
         }
 
-        let mut line = Line::from(line.to_string()).fg(Color::White);
+        line = line.fg(Color::White);
 
         if i == if app.selected_index < app.scroll {
             app.selected_index
