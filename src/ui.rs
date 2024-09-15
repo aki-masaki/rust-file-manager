@@ -2,20 +2,38 @@ pub(crate) use crate::app::Dir;
 use crossterm::style::Color;
 use ratatui::prelude::Rect;
 use ratatui::prelude::Stylize;
+use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::text::Text;
-use ratatui::text::ToSpan;
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 use std::ffi::OsString;
+use std::path::Path;
+use std::path::PathBuf;
 use sysinfo::System;
 
 use crate::App;
 
+fn get_icon(ext: String) -> (String, Color) {
+    let icon = match ext.as_str() {
+        "png" => ("\u{e2a6} ", Color::Red),
+        "rs" => ("\u{e7a8} ", Color::Red),
+        "go" => ("\u{e627} ", Color::Blue),
+        "toml|conf" => ("\u{e615} ", Color::Grey),
+        "ts" => ("\u{e628} ", Color::Blue),
+        "js" => ("\u{e60c} ", Color::Yellow),
+        "java" => ("\u{e738} ", Color::Red),
+        "zip" => ("\u{f06eb} ", Color::Magenta),
+        _ => ("\u{f4a5} ", Color::White),
+    };
+
+    (icon.0.to_string(), icon.1)
+}
+
 fn status_bar(frame: &mut Frame<'_>, app: &mut App) {
     if app.terminal_area.is_none() {
-        return
+        return;
     }
 
     let mut text = app.main_dir.full_path.clone() + " ";
@@ -76,33 +94,53 @@ fn status_bar(frame: &mut Frame<'_>, app: &mut App) {
     );
 }
 
-pub fn render_dir(frame: &mut Frame<'_>, dir: &Dir, level: i32) -> String {
-    let mut text = String::new();
+pub fn render_dir<'a>(frame: &mut Frame<'_>, dir: &Dir, level: i32) -> Vec<Line<'a>> {
+    let mut spans: Vec<Span> = vec![];
+    let mut lines: Vec<Line<'a>> = vec![];
 
     for sub_dir in dir.sub_dirs.as_slice() {
-        text += "  ".repeat(level as usize).as_str();
-        text += &(sub_dir.name.as_str().to_owned() + "\n");
+        let mut line = Line::default();
+
+        line.push_span(Span::from("  ".repeat(level as usize)));
+
+        line.push_span(Span::from("\u{f024b} "));
+
+        line.push_span(Span::from(sub_dir.name.as_str().to_owned() + "\n"));
+
+        lines.push(line);
 
         if dir.expanded {
-            text += render_dir(frame, sub_dir, level + 1).as_str();
+            lines.extend(render_dir(frame, sub_dir, level + 1));
         }
     }
 
     for sub_file in dir.sub_files.as_slice() {
-         text += "  ".repeat(level as usize).as_str();
-         text += &(sub_file.to_owned().1 + "\n");
+        spans.push(Span::from("  ".repeat(level as usize)));
+
+        let puf = PathBuf::from(sub_file.1.clone());
+
+        let icon = get_icon(
+            Path::new(puf.file_name().unwrap())
+                .extension()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap()
+                .to_string(),
+        );
+
+        spans.push(Span::from(icon.0).bg(icon.1));
+
+        spans.push(Span::from(sub_file.to_owned().1 + "\n"));
+
+        lines.push(Line::from(spans.clone()));
+        spans.clear();
     }
 
-    text
+    lines
 }
 
-fn draw_dir(frame: &mut Frame<'_>, rendered_dir: String, app: &mut App) {
-    let lines: Vec<Span<'_>> = rendered_dir
-        .split('\n')
-        .into_iter()
-        .skip(app.scroll)
-        .map(|x| Span::from(x))
-        .collect();
+fn draw_dir<'a>(frame: &mut Frame<'_>, rendered_dir: Vec<Line<'a>>, app: &mut App) {
+    let lines: Vec<Line<'a>> = rendered_dir.into_iter().skip(app.scroll).collect();
 
     let mut l_lines: Vec<Line> = Vec::new();
 
@@ -111,24 +149,27 @@ fn draw_dir(frame: &mut Frame<'_>, rendered_dir: String, app: &mut App) {
             break;
         }
 
-        let mut line = Line::from(line.to_string());
+        let mut line = Line::from(line.to_string()).fg(Color::White);
 
         if i == if app.selected_index < app.scroll {
             app.selected_index
         } else {
             app.selected_index - app.scroll
         } {
-            line = line.fg(Color::DarkRed);
+            line = line.fg(Color::Red);
         }
 
         l_lines.push(line);
     }
 
-    let text = Text::from(l_lines);
-
     frame.render_widget(
-        Paragraph::new(text),
-        Rect::new(0, 1, app.terminal_area.unwrap().width, app.terminal_area.unwrap().height - 2),
+        Paragraph::new(l_lines),
+        Rect::new(
+            0,
+            1,
+            app.terminal_area.unwrap().width,
+            app.terminal_area.unwrap().height - 2,
+        ),
     );
 }
 
