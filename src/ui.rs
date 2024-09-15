@@ -2,10 +2,8 @@ pub(crate) use crate::app::Dir;
 use crossterm::style::Color;
 use ratatui::prelude::Rect;
 use ratatui::prelude::Stylize;
-use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
-use ratatui::text::Text;
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 use std::ffi::OsString;
@@ -98,10 +96,16 @@ pub fn render_dir<'a>(frame: &mut Frame<'_>, dir: &Dir, level: i32) -> Vec<Line<
     let mut spans: Vec<Span> = vec![];
     let mut lines: Vec<Line<'a>> = vec![];
 
-    for sub_dir in dir.sub_dirs.as_slice() {
+    for (i, sub_dir) in dir.sub_dirs.as_slice().into_iter().enumerate() {
         let mut line = Line::default();
 
-        line.push_span(Span::from("  ".repeat(level as usize)));
+        if level > 0 && i > 0 {
+            line.push_span(Span::from("  ".repeat(level as usize + 1)));
+        } else if level > 0 && i == 0 {
+            line.push_span(Span::from("  ".repeat(level as usize)));
+
+            line.push_span(Span::from("└ "));
+        }
 
         line.push_span(Span::from("\u{f024b} "));
 
@@ -115,7 +119,7 @@ pub fn render_dir<'a>(frame: &mut Frame<'_>, dir: &Dir, level: i32) -> Vec<Line<
     }
 
     for sub_file in dir.sub_files.as_slice() {
-        spans.push(Span::from("  ".repeat(level as usize)));
+        spans.push(Span::from("  ".repeat(level as usize + 1)));
 
         let puf = PathBuf::from(sub_file.1.clone());
 
